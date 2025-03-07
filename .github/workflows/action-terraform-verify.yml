@@ -13,40 +13,53 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     name: terraform fmt check
-    outputs:
-      CHECK_STATUS: "${{ env.CHECK_STATUS }}"
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
+
       - name: Fetch changed files
         id: pr_files
         uses: jitterbit/get-changed-files@v1
         with:
           format: "space-delimited"
+
       - name: Configure terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.2.4
+
       - name: Validate terraform fmt (added_modified)
         run: |
           set +e
 
+          # Initialize CHECK_STATUS to 0
           CHECK_STATUS=0
+          echo "CHECK_STATUS=${CHECK_STATUS}" >> $GITHUB_ENV
 
+          # Loop through the changed files
           for changed_file in ${{ steps.pr_files.outputs.added_modified }}; do
             echo "Checking terraform fmt on ${changed_file}..."
 
             if [[ $changed_file == *.tf ]]; then
               terraform fmt -check $changed_file
-              FMT_STATUS=$(echo $?)
+              FMT_STATUS=$?
 
+              # If terraform fmt fails, set CHECK_STATUS to 1
               if [[ $FMT_STATUS -ne 0 ]]; then
                 echo "❌ terraform fmt failed - ${changed_file}" >> $GITHUB_STEP_SUMMARY
                 CHECK_STATUS=1
+                echo "CHECK_STATUS=${CHECK_STATUS}" >> $GITHUB_ENV  # Persist the status
               fi
             fi
           done
+
       - name: Process check
         if: always()
-        run: exit $CHECK_STATUS
+        run: |
+          # Check the final status of CHECK_STATUS
+          if [[ "$CHECK_STATUS" -eq 1 ]]; then
+            echo "Terraform formatting failed. Please fix the formatting."
+            exit 1  # Exit with 1 to indicate failure if there were fmt errors
+          fi
+          echo "Terraform formatting check passed."
