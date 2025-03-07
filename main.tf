@@ -1,5 +1,5 @@
 resource "azurerm_resource_group" "rg" {
-  name     = "CST8918-Lab9-RG"
+  name     = "CST8918-Lab9-ResourceGroup"
   location = var.region
 }
 
