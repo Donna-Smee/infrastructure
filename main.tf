@@ -1,15 +1,15 @@
 resource "azurerm_resource_group" "rg" {
-  name     = "CST8918-Lab9-RG"
-  location = var.region
+name     = "CST8918-Lab9-RG"
+location = var.region
 }
 
 resource "azurerm_storage_account" "storage-acc" {
-  name                     = "storage-acc-ha000070"
-  resource_group_name      = azurerm_resource_group.rg.name
-  location                 = azurerm_resource_group.rg.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+    name                     = "storage-acc-ha000070"
+    resource_group_name      = azurerm_resource_group.rg.name
+    location                 = azurerm_resource_group.rg.location
+account_tier             = "Standard"  # misalignment here
+    account_replication_type = "LRS"
 
-  tags = {
-    environment = "staging"
-  
+    tags = {
+    environment = "staging"  # misalignment here
+}
