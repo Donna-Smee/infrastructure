@@ -1,6 +1,6 @@
 resource "azurerm_resource_group" "rg" {
   name     = "CST8918-Lab9-RG"
-  location = "Canada Central"
+  location = var.region
 }
 
 resource "azurerm_storage_account" "storage-acc" {
@@ -13,4 +13,3 @@ resource "azurerm_storage_account" "storage-acc" {
   tags = {
     environment = "staging"
   }
-}
