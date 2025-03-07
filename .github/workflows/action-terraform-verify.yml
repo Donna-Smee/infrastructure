@@ -47,17 +47,17 @@ jobs:
                 echo "❌ terraform fmt failed - ${changed_file}" >> $GITHUB_STEP_SUMMARY
                 check_status=1  # Set check_status to 1 (failure)
               fi
+
+              # Run terraform validate to check for other issues (syntax errors, etc.)
+              terraform validate $changed_file
+              VALIDATE_STATUS=$?
+
+              if [[ $VALIDATE_STATUS -ne 0 ]]; then
+                echo "❌ terraform validate failed - ${changed_file}" >> $GITHUB_STEP_SUMMARY
+                check_status=1  # Set check_status to 1 (failure)
+              fi
             fi
           done
-
-          # Run terraform validate on the entire directory (not individual files)
-          terraform validate
-          VALIDATE_STATUS=$?
-
-          if [[ $VALIDATE_STATUS -ne 0 ]]; then
-            echo "❌ terraform validate failed" >> $GITHUB_STEP_SUMMARY
-            check_status=1  # Set check_status to 1 (failure)
-          fi
 
           # Set check_status in the environment file to make it available in next steps
           echo "CHECK_STATUS=$check_status" >> $GITHUB_ENV
