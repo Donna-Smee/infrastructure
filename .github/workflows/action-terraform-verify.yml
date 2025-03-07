@@ -13,8 +13,6 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     name: terraform fmt check
-    outputs:
-      CHECK_STATUS: "${{ steps.validate.outputs.check_status }}"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -52,9 +50,11 @@ jobs:
             fi
           done
 
-          # Output the final check_status to the next steps
-          echo "::set-output name=check_status::$check_status"
+          # Set check_status in the environment file to make it available in next steps
+          echo "CHECK_STATUS=$check_status" >> $GITHUB_ENV
 
       - name: Process check
         if: always()
-        run: exit ${{ steps.validate.outputs.check_status }}
+        run: |
+          # Exit with the status saved in the environment variable
+          exit ${{ env.CHECK_STATUS }}
