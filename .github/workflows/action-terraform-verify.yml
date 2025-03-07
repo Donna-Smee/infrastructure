@@ -1,4 +1,4 @@
-name: Validate terraform fmt
+name: Validate terraform fmt and validate
 on:
   pull_request:
     branches:
@@ -12,41 +12,58 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    name: terraform fmt check
-    outputs:
-      CHECK_STATUS: "${{ env.CHECK_STATUS }}"
+    name: terraform fmt and validate check
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
+
       - name: Fetch changed files
         id: pr_files
         uses: jitterbit/get-changed-files@v1
         with:
           format: "space-delimited"
+
       - name: Configure terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.2.4
-      - name: Validate terraform fmt (added_modified)
+
+      - name: Validate terraform fmt and validate (added_modified)
+        id: validate
         run: |
-          set +e
+          # Initialize check_status to 0 (success)
+          check_status=0
 
-          echo "CHECK_STATUS=0" >> $GITHUB_ENV
-
+          # Loop through changed files and check if terraform fmt fails
           for changed_file in ${{ steps.pr_files.outputs.added_modified }}; do
             echo "Checking terraform fmt on ${changed_file}..."
 
             if [[ $changed_file == *.tf ]]; then
               terraform fmt -check $changed_file
-              FMT_STATUS=$(echo $?)
+              FMT_STATUS=$?  # Capture the exit status of terraform fmt
 
-              if [[ $FMT_STATUS -ne 0 ]]; then
+              if [[ $FMT_STATUS -ne 0 ]]; then  # If terraform fmt failed
                 echo "❌ terraform fmt failed - ${changed_file}" >> $GITHUB_STEP_SUMMARY
-                echo "CHECK_STATUS=1" >> $GITHUB_ENV
+                check_status=1  # Set check_status to 1 (failure)
+              fi
+
+              # Run terraform validate to check for other issues (syntax errors, etc.)
+              terraform validate $changed_file
+              VALIDATE_STATUS=$?
+
+              if [[ $VALIDATE_STATUS -ne 0 ]]; then
+                echo "❌ terraform validate failed - ${changed_file}" >> $GITHUB_STEP_SUMMARY
+                check_status=1  # Set check_status to 1 (failure)
               fi
             fi
           done
+
+          # Set check_status in the environment file to make it available in next steps
+          echo "CHECK_STATUS=$check_status" >> $GITHUB_ENV
+
       - name: Process check
         if: always()
-        run: exit $CHECK_STATUS
+        run: |
+          # Exit with the status saved in the environment variable
+          exit ${{ env.CHECK_STATUS }}
