@@ -14,35 +14,47 @@ jobs:
     runs-on: ubuntu-latest
     name: terraform fmt check
     outputs:
-      CHECK_STATUS: "${{ env.CHECK_STATUS }}"
+      CHECK_STATUS: "${{ steps.validate.outputs.check_status }}"
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
+
       - name: Fetch changed files
         id: pr_files
         uses: jitterbit/get-changed-files@v1
         with:
           format: "space-delimited"
+
       - name: Configure terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.2.4
-      - name: Validate terraform fmt (added_modified)
-        run: |
-          echo "CHECK_STATUS=0" >> $GITHUB_ENV  # Initialize CHECK_STATUS
 
+      - name: Validate terraform fmt (added_modified)
+        id: validate
+        run: |
+          # Initialize check_status to 0 (success)
+          check_status=0
+
+          # Loop through changed files and check if terraform fmt fails
           for changed_file in ${{ steps.pr_files.outputs.added_modified }}; do
             echo "Checking terraform fmt on ${changed_file}..."
 
             if [[ $changed_file == *.tf ]]; then
               terraform fmt -check $changed_file
-              if [[ $? -ne 0 ]]; then  # Check if terraform fmt failed
+              FMT_STATUS=$?  # Capture the exit status of terraform fmt
+
+              if [[ $FMT_STATUS -ne 0 ]]; then  # If terraform fmt failed
                 echo "❌ terraform fmt failed - ${changed_file}" >> $GITHUB_STEP_SUMMARY
-                echo "CHECK_STATUS=1" >> $GITHUB_ENV  # Set failure status
+                check_status=1  # Set check_status to 1 (failure)
               fi
             fi
           done
+
+          # Output the final check_status to the next steps
+          echo "::set-output name=check_status::$check_status"
+
       - name: Process check
         if: always()
-        run: exit $CHECK_STATUS
+        run: exit ${{ steps.validate.outputs.check_status }}
