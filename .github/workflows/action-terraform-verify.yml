@@ -37,7 +37,9 @@ jobs:
 
             if [[ $changed_file == *.tf ]]; then
               terraform fmt -check $changed_file
-              if [[ $? -ne 0 ]]; then  # Check if terraform fmt failed
+              FMT_STATUS=$?  # Capture the exit status of terraform fmt
+
+              if [[ $FMT_STATUS -ne 0 ]]; then  # If terraform fmt failed
                 echo "❌ terraform fmt failed - ${changed_file}" >> $GITHUB_STEP_SUMMARY
                 echo "CHECK_STATUS=1" >> $GITHUB_ENV  # Set failure status
               fi
