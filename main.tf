@@ -12,4 +12,4 @@ resource "azurerm_storage_account" "storage-acc" {
 
   tags = {
     environment = "staging"
-  }
+  
